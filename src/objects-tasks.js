@@ -371,35 +371,151 @@ function group(array, keySelector, valueSelector) {
  *  For more examples see unit tests.
  */
 
-const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
-  },
+// *   element: function(value) {
+//   *       return new MySuperBaseElementSelector(...)...
+//   *   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
-  },
+class CssSelector {
+  static lastMethod = '';
 
-  class(/* value */) {
-    throw new Error('Not implemented');
-  },
+  constructor(selectorView) {
+    this.selectorView = selectorView;
+  }
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
-  },
+  element(value) {
+    if (this.selectorView) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    CssSelector.lastMethod = 'element';
+    return new CssSelector(`${this.selectorView}${value}`);
+  }
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
-  },
+  id(value) {
+    if (this.lastMethod === 'id' || this.selectorView.includes('#')) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    if (CssSelector.lastMethod && CssSelector.lastMethod !== 'element') {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    // if (CssSelector.lastMethod === '') {
+    //   CssSelector.lastMethod = 'id';
+    //   return new CssSelector(`${this.selectorView}#${value}`);
+    // }
+    // if (this.selectorView.includes('#')) {
+    //   throw new Error(
+    //     'Element, id and pseudo-element should not occur more then one time inside the selector'
+    //   );
+    // }
+    // if (CssSelector.lastMethod !== 'element') {
+    //   throw new Error(
+    //     'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+    //   );
+    // }
+    CssSelector.lastMethod = 'id';
+    return new CssSelector(`${this.selectorView}#${value}`);
+  }
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
-  },
+  class(value) {
+    // if (!CssSelector.lastMethod) {
+    //   CssSelector.lastMethod = 'class';
+    //   return new CssSelector(`${this.selectorView}.${value}`);
+    // }
+    if (
+      CssSelector.lastMethod &&
+      CssSelector.lastMethod === 'attr'
+      // (CssSelector.lastMethod && CssSelector.lastMethod === 'pseudoClass') ||
+      // (CssSelector.lastMethod && CssSelector.lastMethod === 'pseudoElement')
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    CssSelector.lastMethod = 'class';
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
-  },
-};
+    return new CssSelector(`${this.selectorView}.${value}`);
+  }
+
+  attr(value) {
+    // if (CssSelector.lastMethod === '') {
+    //   CssSelector.lastMethod = 'attr';
+    //   return new CssSelector(`${this.selectorView}[${value}]`);
+    // }
+    if (
+      (CssSelector.lastMethod && CssSelector.lastMethod === 'pseudoClass') ||
+      (CssSelector.lastMethod && CssSelector.lastMethod === 'pseudoElement')
+    ) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    CssSelector.lastMethod = 'attr';
+    return new CssSelector(`${this.selectorView}[${value}]`);
+  }
+
+  pseudoClass(value) {
+    // if (CssSelector.lastMethod === '') {
+    //   CssSelector.lastMethod = 'pseudoClass';
+    //   return new CssSelector(`${this.selectorView}:${value}`);
+    // }
+    if (CssSelector.lastMethod && CssSelector.lastMethod === 'pseudoElement') {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    CssSelector.lastMethod = 'pseudoClass';
+    return new CssSelector(`${this.selectorView}:${value}`);
+  }
+
+  pseudoElement(value) {
+    if (
+      this.lastMethod === 'pseudoElement' ||
+      this.selectorView.includes('::')
+    ) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    // if (CssSelector.lastMethod === '') {
+    //   CssSelector.lastMethod = 'pseudoElement';
+    //   return new CssSelector(`${this.selectorView}::${value}`);
+    // }
+    // if (this.selectorView.includes('::')) {
+    //   throw new Error(
+    //     'Element, id and pseudo-element should not occur more then one time inside the selector'
+    //   );
+    // }
+    // if (CssSelector.lastMethod === 'pseudoElement') {
+    //   throw new Error(
+    //     'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+    //   );
+    // }
+    CssSelector.lastMethod = 'pseudoElement';
+    return new CssSelector(`${this.selectorView}::${value}`);
+  }
+
+  // toString() {
+  //   return this.stringify();
+  // }
+
+  combine(selector1, combinator, selector2) {
+    const combo = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+    this.selectorView = '';
+    return new CssSelector(combo);
+  }
+
+  stringify() {
+    CssSelector.lastMethod = '';
+    return this.selectorView.toString();
+  }
+}
+
+const cssSelectorBuilder = new CssSelector('');
 
 module.exports = {
   shallowCopy,
